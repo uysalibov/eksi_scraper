@@ -66,8 +66,7 @@ def output_entry(writer, output_file, data):
     dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
     print(Fore.RED + f'[{dt_string}] ' + Fore.CYAN + 'INFO ' + Fore.WHITE + f'{data}' + Fore.RESET)
     i += 1
-    if output_file != '':
-        writer.writerow([data['Entry'], data['Date'], data['Author']])
+    writer.writerow([data['Entry'], data['Date'], data['Author']])
 
 
 
