@@ -3,14 +3,15 @@
 <img src='src/logo.png' alt='Best Logo'>
 
 <p align='center'>
-eksi_scraper scrapes all entries in the title which given as arguments and then save them to a csv file.
+eksi_scraper scrapes asynchronous all entries in the title which given as arguments and then save them to a csv file.
 <p>
 
 # 📌 Example Usage
 <img src='src/main.gif'>
-```sh
+  
+```py
   eksi_scraper.py -u URL -o FILE_NAME
-  ```
+```
 
 ## ❗ Arguments
 * -u, --url [reguired] <pre>URL of the title you want to scrape</pre>
