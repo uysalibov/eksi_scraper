@@ -26,6 +26,44 @@ args = parser.parse_args()
 all_data = []
 total_entries = 0
 
+def parse_date(date_str):
+    first_date_str = date_str.split('~')[0].strip()
+    try:
+        return datetime.strptime(first_date_str, "%d.%m.%Y %H:%M")
+    except ValueError:
+        try:
+            return datetime.strptime(first_date_str, "%d.%m.%Y")
+        except ValueError:
+            return datetime.min
+
+def save_output(data, output_file, format_type, is_user_profile):
+    os.makedirs(os.path.dirname(output_file) or '.', exist_ok=True)
+    if format_type == 'json':
+        with open(output_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+    elif format_type == 'txt':
+        with open(output_file, 'w', encoding='utf-8') as f:
+            for d in data:
+                if is_user_profile:
+                    f.write(f"Topic: {d['Topic']}\n")
+                else:
+                    f.write(f"Author: {d['Author']}\n")
+                f.write(f"Entry: {d['Entry']}\n")
+                f.write(f"Date: {d['Date']}\n")
+                f.write("-" * 50 + "\n")
+    else:
+        with open(output_file, 'w', encoding='utf-8', newline='') as f:
+            writer = csv.writer(f)
+            if is_user_profile:
+                writer.writerow(['Topic', 'Entry', 'Date'])
+                for d in data:
+                    writer.writerow([d['Topic'], d['Entry'], d['Date']])
+            else:
+                writer.writerow(['Entry', 'Date', 'Author'])
+                for d in data:
+                    writer.writerow([d['Entry'], d['Date'], d['Author']])
+
+
 def extract_text_with_links(content_div):
     # Mutates the soup in-place to append URLs to anchor tag texts
     for a in content_div.find_all('a'):
@@ -185,51 +223,12 @@ if __name__ == '__main__':
          asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     asyncio.run(main(args, last_page, is_user_profile))
 
-    # Ensure downloads directory exists
-    os.makedirs('downloads', exist_ok=True)
-    
-    # Sort all_data by creation date (newest to oldest)
-    def parse_date(date_str):
-        first_date_str = date_str.split('~')[0].strip()
-        try:
-            return datetime.strptime(first_date_str, "%d.%m.%Y %H:%M")
-        except ValueError:
-            try:
-                return datetime.strptime(first_date_str, "%d.%m.%Y")
-            except ValueError:
-                return datetime.min
-
     if args.sort == 'date':
         all_data.sort(key=lambda x: parse_date(x['Date']), reverse=True)
 
     # Output Data
     output_file = os.path.join('downloads', f'{output_name}.{args.format}')
-    if args.format == 'json':
-        with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(all_data, f, ensure_ascii=False, indent=4)
-    elif args.format == 'txt':
-        with open(output_file, 'w', encoding='utf-8') as f:
-            for d in all_data:
-                if is_user_profile:
-                    f.write(f"Topic: {d['Topic']}\n")
-                    f.write(f"Entry: {d['Entry']}\n")
-                    f.write(f"Date: {d['Date']}\n")
-                else:
-                    f.write(f"Author: {d['Author']}\n")
-                    f.write(f"Entry: {d['Entry']}\n")
-                    f.write(f"Date: {d['Date']}\n")
-                f.write("-" * 50 + "\n")
-    else:
-        with open(output_file, 'w', encoding='utf-8', newline='') as f:
-            writer = csv.writer(f)
-            if is_user_profile:
-                writer.writerow(['Topic', 'Entry', 'Date'])
-                for d in all_data:
-                    writer.writerow([d['Topic'], d['Entry'], d['Date']])
-            else:
-                writer.writerow(['Entry', 'Date', 'Author'])
-                for d in all_data:
-                    writer.writerow([d['Entry'], d['Date'], d['Author']])
+    save_output(all_data, output_file, args.format, is_user_profile)
                     
     now = datetime.now()
     dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
