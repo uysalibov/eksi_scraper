@@ -21,11 +21,6 @@ parser.add_argument('-o', '--output', type=str, required=False, default='', help
 parser.add_argument('--format', type=str, choices=['json', 'csv', 'txt'], default='json', help='Output format: json (default), csv, or txt')
 parser.add_argument('--sort', type=str, choices=['date', 'sukela'], default='date', help='Sort topic entries by date or sukela (topic only)')
 
-args = parser.parse_args()
-
-all_data = []
-total_entries = 0
-
 def parse_date(date_str):
     first_date_str = date_str.split('~')[0].strip()
     try:
@@ -75,7 +70,6 @@ def extract_text_with_links(content_div):
     return content_div.text.replace('\n',' ').replace('\r', '').replace('\t', ' ').strip()
 
 async def fetch_topic_page(session, url, semaphore):
-    global total_entries
     async with semaphore:
         async with session.get(url, headers={'User-Agent':USER_AGENT}) as resp: 
             text_resp = await resp.text()
@@ -92,7 +86,6 @@ async def fetch_topic_page(session, url, semaphore):
                     'Author': entry_author.text.strip()
                 }
                 page_data.append(data)
-                total_entries += 1
                 
                 entry = entry.find_next('div', {'class':'content'})
                 entry_date = entry_date.find_next('a', {'class':'entry-date permalink'})
@@ -100,7 +93,6 @@ async def fetch_topic_page(session, url, semaphore):
             return page_data
 
 async def fetch_user_page(session, url, semaphore, max_retries=3):
-    global total_entries
     for attempt in range(max_retries):
         try:
             async with semaphore:
@@ -131,7 +123,6 @@ async def fetch_user_page(session, url, semaphore, max_retries=3):
                                 'Date': entry_date_elem.text.strip()
                             }
                             page_data.append(data)
-                            total_entries += 1
                             entries_found += 1
                     
                     return page_data
@@ -140,18 +131,19 @@ async def fetch_user_page(session, url, semaphore, max_retries=3):
     return []
 
 
-async def main(args, last_page, is_user_profile):
+async def main(url, sort_pref, last_page, is_user_profile):
+    all_data = []
     semaphore = asyncio.Semaphore(3) # Limit concurrency to 3
     async with aiohttp.ClientSession() as session:
         if is_user_profile:
-            parsed_url = urllib.parse.urlparse(args.url)
+            parsed_url = urllib.parse.urlparse(url)
             path_parts = parsed_url.path.strip('/').split('/')
             username = path_parts[-1]
             base_api_url = f"https://eksisozluk.com/son-entryleri?nick={username}"
             tasks = [fetch_user_page(session, f'{base_api_url}&p={i}', semaphore) for i in range(1, last_page + 1)]
         else:
-            base_topic_url = args.url.split("?")[0]
-            if args.sort == 'sukela':
+            base_topic_url = url.split("?")[0]
+            if sort_pref == 'sukela':
                 tasks = [fetch_topic_page(session, f'{base_topic_url}?a=nice&p={i}', semaphore) for i in range(1, last_page + 1)]
             else:
                 tasks = [fetch_topic_page(session, f'{base_topic_url}?p={i}', semaphore) for i in range(1, last_page + 1)]
@@ -160,6 +152,7 @@ async def main(args, last_page, is_user_profile):
         for page_data in results:
             if page_data:
                 all_data.extend(page_data)
+    return all_data
 
 def parse_url_info(url, sort_pref):
     """
@@ -205,6 +198,7 @@ def parse_url_info(url, sort_pref):
     return is_user_profile, last_page, filename
 
 if __name__ == '__main__':
+    args = parser.parse_args()
     print(Fore.MAGENTA + LOGO) # print logo
 
     is_user_profile, last_page, auto_filename = parse_url_info(args.url, args.sort)
@@ -221,7 +215,8 @@ if __name__ == '__main__':
 
     if sys.platform == 'win32':
          asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    asyncio.run(main(args, last_page, is_user_profile))
+    
+    all_data = asyncio.run(main(args.url, args.sort, last_page, is_user_profile))
 
     if args.sort == 'date':
         all_data.sort(key=lambda x: parse_date(x['Date']), reverse=True)
@@ -232,5 +227,5 @@ if __name__ == '__main__':
                     
     now = datetime.now()
     dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-    print(Fore.RED + f'[{dt_string}] ' + Fore.GREEN + 'COMPLETED ' + Fore.YELLOW + f'Scrape took {time.time() - start_time:.2f} seconds.', f'Scraped {total_entries} entries.')
+    print(Fore.RED + f'[{dt_string}] ' + Fore.GREEN + 'COMPLETED ' + Fore.YELLOW + f'Scrape took {time.time() - start_time:.2f} seconds.', f'Scraped {len(all_data)} entries.')
     print(Fore.YELLOW + f'Saved to {output_file}' + Fore.RESET)
