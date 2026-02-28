@@ -3,7 +3,7 @@
 <img src='src/logo.png' alt='Best Logo'>
 
 <p align='center'>
-eksi_scraper scrapes asynchronous all entries in the title which given as arguments and then save them to a csv file.
+eksi_scraper asynchronously scrapes all entries in the topic or user profile given as arguments and then chronologically saves them to a `downloads` directory.
 <p>
 
 # 📌 Example Usage
@@ -14,8 +14,10 @@ eksi_scraper scrapes asynchronous all entries in the title which given as argume
 ```
 
 ## ❗ Arguments
-* -u, --url [reguired] <pre>URL of the title you want to scrape</pre>
-* -o, --output [optional] <pre>name of the csv output file <br>Default Name: eksi_scraper</pre>
+* -u, --url [required] <pre>URL of the topic or user profile you want to scrape</pre>
+* -o, --output [optional] <pre>name of the output file <br>Default Name: Auto-generated from topic name or username</pre>
+* --format [optional] <pre>Output format (json, csv, or txt) <br>Default: json</pre>
+* --sort [optional] <pre>Sort topic entries by (date or sukela) <br>Default: date</pre>
 
 ## ❗❗ Requirements
 * aiohttp
@@ -36,5 +38,5 @@ eksi_scraper scrapes asynchronous all entries in the title which given as argume
    </a>
 
 ## ✍️ To-Do
-- [ ] Supports .txt and .json output file extensions
-- [ ] Scrape users entries
+- [x] Supports .json and .txt output file extensions natively
+- [x] Scrape users entries and auto-generate filenames
